@@ -4,6 +4,7 @@ from aiogram.types import Message
 from aiogram.filters import Command
 from hand import rt
 from reply import rt_2
+from feedback import rt_3
 from bot_cmds import private
 from inf import TOKEN, ADMIN_LIST
 
@@ -11,7 +12,7 @@ BOT_TOKEN = TOKEN
 
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
-dp.include_routers(rt, rt_2)
+dp.include_routers(rt, rt_2, rt_3)
 
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
