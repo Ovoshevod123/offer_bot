@@ -31,9 +31,10 @@ buttons_edit = [edit_photo, edit_price, edit_name, edit_description, edit_locate
 def but_del(send_01):
     db = sqlite3.connect('users.db')
     cur = db.cursor()
-    cur.execute(f"SELECT offer_name FROM users_offer WHERE id = '{send_01.from_user.id}'")
+    print(send_01.from_user.full_name)
+    cur.execute(f"SELECT offer_name FROM users_offer WHERE id = '{send_01.chat.id}'")
     name = cur.fetchall()
-    cur.execute(f"SELECT offer_id_channel FROM users_offer WHERE id = '{send_01.from_user.id}'")
+    cur.execute(f"SELECT offer_id_channel FROM users_offer WHERE id = '{send_01.chat.id}'")
     id_channel = cur.fetchall()
     data = dict(zip(id_channel, name))
     butt_del = []

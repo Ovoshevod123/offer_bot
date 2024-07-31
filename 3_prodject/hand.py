@@ -30,11 +30,12 @@ async def start(message: Message):
     send_01 = message
 
 @rt.callback_query(F.data == 'back')
-async def back(call: CallbackQuery, bot: Bot):
+async def back(call: CallbackQuery, state: FSMContext):
     rows = [[buttons[1]],
             [buttons[0]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await call.message.edit_text(text='Здравсвуйте', reply_markup=markup)
+    await state.clear()
 
 @rt.callback_query(F.data == 'new')
 async def new_1(callback: CallbackQuery, state: FSMContext):
@@ -95,7 +96,7 @@ async def new_6(message: Message, state: FSMContext, bot: Bot, ):
     data = await state.get_data()
     global text, send, name_ofer, data_state
     data_state = data
-    text = f"Цена: {data['price']}\n{data['name']}\n{data['description']}\n{data['locate']}\n\nПродавец: @{send_01.from_user.username}\nРейтинг продавца: 4,89/5"
+    text = f"Цена: {data['price']}\n{data['name']}\n{data['description']}\n{data['locate']}\n\nПродавец: @{message.from_user.username}\nРейтинг продавца: 4,89/5"
     builder = MediaGroupBuilder(caption=text)
     for i in data['photo']:
         builder.add_photo(media=f'{i}')
@@ -139,13 +140,13 @@ async def send_0(callback: CallbackQuery, bot: Bot):
     db.commit()
     db.close()
 
-    await callback.message.edit_text(text='Теперь твое объявление опубликованно <a href="https://t.me/jxddkcj">здесь</a>.', parse_mode='HTML', reply_markup=markup)
+    await callback.message.edit_text(text='Теперь твое объявление опубликованно <a href="https://web.telegram.org/a/#-1002160209777">здесь</a>.', parse_mode='HTML', reply_markup=markup)
     photo.clear()
 
-def offer_def():
+def offer_def(msg):
     global id_list, deff
     id_list = []
-    deff = but_del(send_01=send_01)
+    deff = but_del(msg)
     for i in deff[1].keys():
         id_list.append(f'{i[0]}')
     row = deff[0]
@@ -153,7 +154,7 @@ def offer_def():
 
 @rt.callback_query(F.data == 'menu')
 async def delete_0(call: CallbackQuery):
-    rows = offer_def()
+    rows = offer_def(call.message)
     rows_2 = [[buttons[0]],
               [buttons[4]]]
     if len(rows) == 1:
