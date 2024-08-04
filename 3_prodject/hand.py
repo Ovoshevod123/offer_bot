@@ -8,11 +8,13 @@ import sqlite3
 import time
 from reply import buttons, but_del, edit_but, buttons_edit
 from inf import CHANNEL_ID
+from feedback import average_rating
 
 rt = Router()
 
 photo = []
 id_list = []
+
 class new_product(StatesGroup):
     photo = State()
     name = State()
@@ -23,16 +25,16 @@ class new_product(StatesGroup):
 @rt.message(Command('start'))
 async def start(message: Message):
     global send_01
-    rows = [[buttons[1]],
-            [buttons[0]]]
+    rows = [[buttons[5], buttons[1]],
+            [buttons[6], buttons[0]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await message.answer(text='Здравсвуйте', reply_markup=markup)
     send_01 = message
 
 @rt.callback_query(F.data == 'back')
 async def back(call: CallbackQuery, state: FSMContext):
-    rows = [[buttons[1]],
-            [buttons[0]]]
+    rows = [[buttons[5], buttons[1]],
+            [buttons[6], buttons[0]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await call.message.edit_text(text='Здравсвуйте', reply_markup=markup)
     await state.clear()
@@ -96,7 +98,8 @@ async def new_6(message: Message, state: FSMContext, bot: Bot, ):
     data = await state.get_data()
     global text, send, name_ofer, data_state
     data_state = data
-    text = f"Цена: {data['price']}\n{data['name']}\n{data['description']}\n{data['locate']}\n\nПродавец: @{message.from_user.username}\nРейтинг продавца: 4,89/5"
+    average = await average_rating(message.from_user.username)
+    text = f"Цена: {data['price']}\n{data['name']}\n{data['description']}\n{data['locate']}\n\nПродавец: @{message.from_user.username}\nРейтинг продавца: {average[0]}\nКол-во отзывов: {average[1]}"
     builder = MediaGroupBuilder(caption=text)
     for i in data['photo']:
         builder.add_photo(media=f'{i}')
@@ -143,10 +146,10 @@ async def send_0(callback: CallbackQuery, bot: Bot):
     await callback.message.edit_text(text='Теперь твое объявление опубликованно <a href="https://web.telegram.org/a/#-1002160209777">здесь</a>.', parse_mode='HTML', reply_markup=markup)
     photo.clear()
 
-def offer_def(msg):
+def offer_def(msg, from_var):
     global id_list, deff
     id_list = []
-    deff = but_del(msg)
+    deff = but_del(msg, from_var)
     for i in deff[1].keys():
         id_list.append(f'{i[0]}')
     row = deff[0]
@@ -154,7 +157,7 @@ def offer_def(msg):
 
 @rt.callback_query(F.data == 'menu')
 async def delete_0(call: CallbackQuery):
-    rows = offer_def(call.message)
+    rows = offer_def(call.message, 'menu')
     rows_2 = [[buttons[0]],
               [buttons[4]]]
     if len(rows) == 1:
@@ -174,7 +177,8 @@ async def forward(message):
     a = name[0][2]
     a = a.split('|')
     a.pop(0)
-    text = f"Цена: {name[0][3]}\n{name[0][4]}\n{name[0][5]}\n{name[0][6]}\nПродавец: @{name[0][8]}\nРейтинг продавца: 4,89/5"
+    average = await average_rating(name[0][8])
+    text = f"Цена: {name[0][3]}\n{name[0][4]}\n{name[0][5]}\n{name[0][6]}\nПродавец: @{name[0][8]}\nРейтинг продавца: {average[0]}\nКол-во отзывов: {average[1]}"
     builder = MediaGroupBuilder(caption=text)
     for i in a:
         builder.add_photo(media=f'{i}')
@@ -203,10 +207,13 @@ async def delete_1(call: CallbackQuery, bot: Bot):
     await call.message.delete()
     call_data = call.data
     call_inf = call
+    id_msg_2 = await forward(call.message)
+    await delete_2(call)
+
+async def delete_2(call):
     rows = [[edit_but[0], edit_but[1]],
             [edit_but[2]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    id_msg_2 = await forward(call.message)
     await call.message.answer(text='Это ваше объявление⬆️\n\nЧто хотите сделать?', reply_markup=markup)
 
 @rt.callback_query(F.data == 'back_2')
@@ -215,7 +222,8 @@ async def back_edit(call: CallbackQuery, bot: Bot):
 
 @rt.callback_query(F.data == 'dell')
 async def del_1(call: CallbackQuery):
-    rows = [[InlineKeyboardButton(text='Продал в барахолке "название"', callback_data='sell'), InlineKeyboardButton(text='Другая причина', callback_data='dell_2')]]
+    rows = [[InlineKeyboardButton(text='Продал в барахолке "название"', callback_data='sell'), InlineKeyboardButton(text='Другая причина', callback_data='dell_2')],
+            [InlineKeyboardButton(text='Назад', callback_data='menu')]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await call.message.edit_text(text='Укажити причину удаления сообщения', reply_markup=markup)
 
@@ -292,7 +300,8 @@ async def edit_media(message: Message, bot: Bot):
     a = name[0][2]
     a = a.split('|')
     a.pop(0)
-    text = f"Цена: {name[0][3]}\n{name[0][4]}\n{name[0][5]}\n{name[0][6]}\nПродавец: @{name[0][8]}\nРейтинг продавца: 4,89/5"
+    average = await average_rating(name[0][8])
+    text = f"Цена: {name[0][3]}\n{name[0][4]}\n{name[0][5]}\n{name[0][6]}\nПродавец: @{name[0][8]}\nРейтинг продавца: {average[0]}\nКол-во отзывов: {average[1]}"
     builder = MediaGroupBuilder(caption=text)
     for i in a:
         builder.add_photo(media=f'{i}')
@@ -374,7 +383,8 @@ async def edit_photo_2(call: CallbackQuery, bot: Bot):
     name = cur.fetchall()
     db.commit()
     db.close()
-    text = f"Цена: {name[0][4]}\n{name[0][3]}\n{name[0][5]}\n{name[0][6]}\nПродавец: @{name[0][8]}\nРейтинг продавца: 4,89/5"
+    average = await average_rating(name[0][8])
+    text = f"Цена: {name[0][4]}\n{name[0][3]}\n{name[0][5]}\n{name[0][6]}\nПродавец: @{name[0][8]}\nРейтинг продавца: {average[0]}\nКол-во отзывов: {average[1]}"
     a = name[0][2]
     a = a.split('|')
     a.pop(0)
@@ -405,7 +415,8 @@ async def edit_photo_2(call: CallbackQuery, bot: Bot):
     name = cur.fetchall()
     db.commit()
     db.close()
-    text = f"Цена: {name[0][5]}\n{name[0][3]}\n{name[0][4]}\n{name[0][6]}\nПродавец: @{name[0][8]}\nРейтинг продавца: 4,89/5"
+    average = await average_rating(name[0][8])
+    text = f"Цена: {name[0][5]}\n{name[0][3]}\n{name[0][4]}\n{name[0][6]}\nПродавец: @{name[0][8]}\nРейтинг продавца: {average[0]}\nКол-во отзывов: {average[1]}"
     await bot.edit_message_caption(chat_id=CHANNEL_ID, message_id=call_data, caption=text)
     await call.message.edit_text(text='Теперь твое объявление опубликованно <a href="https://t.me/jxddkcj">здесь</a>.',
                                  parse_mode='HTML', reply_markup=markup)
@@ -422,8 +433,8 @@ async def send_media(message):
     a = name[2]
     a = a.split('|')
     a.pop(0)
-
-    text = f"Цена: {name[5]}\n{name[3]}\n{name[4]}\n{name[6]}\nПродавец: @{name[0][8]}\nРейтинг продавца: 4,89/5"
+    average = await average_rating(name[8])
+    text = f"Цена: {name[5]}\n{name[3]}\n{name[4]}\n{name[6]}\nПродавец: @{name[8]}\nРейтинг продавца: {average[0]}\nКол-во отзывов: {average[1]}"
     builder = MediaGroupBuilder(caption=text)
     for i in a:
         builder.add_photo(media=f'{i}')

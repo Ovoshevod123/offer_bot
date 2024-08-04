@@ -11,6 +11,8 @@ menu = InlineKeyboardButton(text='Мои объявления', callback_data='m
 back = InlineKeyboardButton(text='Назад', callback_data='back')
 new_2 = InlineKeyboardButton(text='Заполнить объявление заново', callback_data='new')
 good = InlineKeyboardButton(text='Все верно! Опубликовать', callback_data='good')
+pay = InlineKeyboardButton(text='Платные тарифы', callback_data='pay')
+fb = InlineKeyboardButton(text='Меню отзывов', callback_data='fb_menu')
 
 delete_final = InlineKeyboardButton(text='Удалить его', callback_data='dell')
 edit = InlineKeyboardButton(text='Отредактировать его', callback_data='edit')
@@ -22,16 +24,15 @@ edit_description = InlineKeyboardButton(text='Изменить описание'
 edit_price = InlineKeyboardButton(text='Изменить цену', callback_data='price')
 edit_locate = InlineKeyboardButton(text='Изменить место встречи', callback_data='locate')
 
-buttons = [new, menu, new_2, good, back]
+buttons = [new, menu, new_2, good, back, pay, fb]
 
 edit_but = [delete_final, edit, back_edit]
 
 buttons_edit = [edit_photo, edit_price, edit_name, edit_description, edit_locate]
 
-def but_del(send_01):
+def but_del(send_01, from_var):
     db = sqlite3.connect('users.db')
     cur = db.cursor()
-    print(send_01.from_user.full_name)
     cur.execute(f"SELECT offer_name FROM users_offer WHERE id = '{send_01.chat.id}'")
     name = cur.fetchall()
     cur.execute(f"SELECT offer_id_channel FROM users_offer WHERE id = '{send_01.chat.id}'")
@@ -59,4 +60,4 @@ def but_del(send_01):
 
     db.commit()
     db.close()
-    return a, data
+    return a, data, from_var
