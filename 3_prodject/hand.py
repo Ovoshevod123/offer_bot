@@ -14,6 +14,7 @@ rt = Router()
 
 photo = []
 id_list = []
+id_list_pay = []
 
 class new_product(StatesGroup):
     photo = State()
@@ -33,11 +34,14 @@ async def start(message: Message):
 
 @rt.callback_query(F.data == 'back')
 async def back(call: CallbackQuery, state: FSMContext):
+    global id_list, id_list_pay
     rows = [[buttons[5], buttons[1]],
             [buttons[6], buttons[0]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await call.message.edit_text(text='Здравсвуйте', reply_markup=markup)
     await state.clear()
+    id_list.clear()
+    id_list_pay.clear()
 
 @rt.callback_query(F.data == 'new')
 async def new_1(callback: CallbackQuery, state: FSMContext):
@@ -147,11 +151,15 @@ async def send_0(callback: CallbackQuery, bot: Bot):
     photo.clear()
 
 def offer_def(msg, from_var):
-    global id_list, deff
-    id_list = []
+    global id_list, deff, id_list_pay
+
     deff = but_del(msg, from_var)
-    for i in deff[1].keys():
-        id_list.append(f'{i[0]}')
+    if from_var == 'menu':
+        for i in deff[1].keys():
+            id_list.append(f'{i[0]}_menu')
+    if from_var == 'pay':
+        for i in deff[1].keys():
+            id_list_pay.append(f'{i[0]}_pay')
     row = deff[0]
     return row
 
@@ -167,10 +175,10 @@ async def delete_0(call: CallbackQuery):
         markup = InlineKeyboardMarkup(inline_keyboard=rows)
         await call.message.edit_text(text='Выберите товар:', reply_markup=markup)
 
-async def forward(message):
+async def forward(message, offer_data):
     db = sqlite3.connect('users.db')
     cur = db.cursor()
-    cur.execute(f"SELECT * FROM users_offer WHERE offer_id_channel = '{call_data}'")
+    cur.execute(f"SELECT * FROM users_offer WHERE offer_id_channel = '{offer_data}'")
     name = cur.fetchall()
     db.commit()
     db.close()
@@ -203,14 +211,13 @@ async def del_media(ids, bot, id_offer):
 
 @rt.callback_query(lambda query: query.data in id_list)
 async def delete_1(call: CallbackQuery, bot: Bot):
-    global call_data, call_inf, id_msg_2
+    global call_data, call_inf, id_msg_2, id_list
     await call.message.delete()
+    id_list.clear()
     call_data = call.data
+    call_data = call_data.replace('_menu', '')
     call_inf = call
-    id_msg_2 = await forward(call.message)
-    await delete_2(call)
-
-async def delete_2(call):
+    id_msg_2 = await forward(call.message, call_data)
     rows = [[edit_but[0], edit_but[1]],
             [edit_but[2]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)

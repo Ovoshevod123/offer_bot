@@ -42,7 +42,7 @@ def but_del(send_01, from_var):
     a = []
     for i in data:
         if i != None:
-            name_i = InlineKeyboardButton(text=f'{data[i][0]}', callback_data=f'{i[0]}')
+            name_i = InlineKeyboardButton(text=f'{data[i][0]}', callback_data=f'{i[0]}_{from_var}')
             butt_del.append(name_i)
         else:
             break
@@ -60,4 +60,4 @@ def but_del(send_01, from_var):
 
     db.commit()
     db.close()
-    return a, data, from_var
+    return a, data

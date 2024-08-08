@@ -12,6 +12,21 @@ from inf import CHANNEL_ID
 rt_3 = Router()
 fb_score_main = 0
 
+async def average_rating(user):
+    common = 0
+    db = sqlite3.connect('users.db')
+    cur = db.cursor()
+    cur.execute(f"SELECT fb_score FROM fb_offer WHERE fb_user = '{user}'")
+    score = cur.fetchall()
+    col = len(score)
+    db.commit()
+    db.close()
+
+    for i in score:
+        common += int(i[0])
+    common = int(common)/col
+    return common, col
+
 async def forward(message, id):
     db = sqlite3.connect('users.db')
     cur = db.cursor()
@@ -22,7 +37,8 @@ async def forward(message, id):
     a = name[0][2]
     a = a.split('|')
     a.pop(0)
-    text = f"Цена: {name[0][3]}\n{name[0][4]}\n{name[0][5]}\n{name[0][6]}\n\nПродавец: @{name[0][8]}\nРейтинг продавца: 4,89/5"
+    average = await average_rating(name[0][8])
+    text = f"Цена: {name[0][3]}\n{name[0][4]}\n{name[0][5]}\n{name[0][6]}\n\nПродавец: @{name[0][8]}\nРейтинг продавца: {average[0]}\nКол-во отзывов: {average[1]}"
     builder = MediaGroupBuilder(caption=text)
     for i in a:
         builder.add_photo(media=f'{i}')
@@ -39,12 +55,12 @@ class feedback_class_2(StatesGroup):
 class fb_chek(StatesGroup):
     user_name = State()
 
-@rt_3.message(Command('feedback'))
-async def menu_fb(message: Message):
+@rt_3.callback_query(F.data == 'fb_menu')
+async def menu_fb(call: CallbackQuery):
     rows = [[InlineKeyboardButton(text='Оставить отзыв', callback_data='send_fb'), InlineKeyboardButton(text='Посмотреть отзывы', callback_data='chek_fb')],
             [InlineKeyboardButton(text='Главное меню', callback_data='back')]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    await message.answer(text='fb', reply_markup=markup)
+    await call.message.edit_text(text='fb', reply_markup=markup)
 
 @rt_3.callback_query(F.data == 'fb_back_1')
 async def feedback_0(call: CallbackQuery, state: FSMContext):
@@ -56,38 +72,47 @@ async def feedback_0(call: CallbackQuery, state: FSMContext):
 
 @rt_3.callback_query(F.data == 'chek_fb')
 async def feedback_chek_0(call: CallbackQuery, state: FSMContext):
+    global fb_score_main
     rows = [[InlineKeyboardButton(text='Назад', callback_data='fb_back_1')]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    await call.message.edit_text(text='Введите имя продавца (Пример: @name)')
+    await call.message.edit_text(text='Введите имя продавца (Пример: @name)', reply_markup=markup)
     await state.set_state(fb_chek.user_name)
+    fb_score_main -= fb_score_main
 
 @rt_3.callback_query(F.data == '>')
 async def feedback_chek_0(call: CallbackQuery):
     global fb_score_main
     rows = [[InlineKeyboardButton(text='<', callback_data='<'), InlineKeyboardButton(text='>', callback_data='>')],
             [InlineKeyboardButton(text='Назад', callback_data='chek_fb')]]
-    markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    scr = fb_score_main + 1
-    await fbs_def(call.message, fbs, markup, scr)
+    fb_score_main += 1
+    scr = fb_score_main
+    await fbs_def(call.message, fbs, rows, scr)
 
 @rt_3.callback_query(F.data == '<')
 async def feedback_chek_0(call: CallbackQuery):
     global fb_score_main
     rows = [[InlineKeyboardButton(text='<', callback_data='<'), InlineKeyboardButton(text='>', callback_data='>')],
             [InlineKeyboardButton(text='Назад', callback_data='chek_fb')]]
-    markup = InlineKeyboardMarkup(inline_keyboard=rows)
     if fb_score_main == 0:
         scr = fb_score_main
     else:
-        scr = fb_score_main - 1
-    await fbs_def(call.message, fbs, markup, scr)
+        fb_score_main -= 1
+        scr = fb_score_main
+    await fbs_def(call.message, fbs, rows, scr)
 
-async def fbs_def(message, data_fbs, markup, score):
+async def fbs_def(message, data_fbs, rows, score):
+    text = f"Отзыв {score+1} из {fb_score}\n\nОценка:\n{'⭐' * data_fbs[score][3]}{' ☆' * (5 - data_fbs[score][3])}\n\nКоментарий:\n{data_fbs[score][2]}\n\nДата публикации отзыва: {data_fbs[score][5]}"
+    if score == 0:
+        rows[0].pop(0)
+        markup = InlineKeyboardMarkup(inline_keyboard=rows)
+    if score == fb_score - 1:
+        rows[0].pop(1)
+        markup = InlineKeyboardMarkup(inline_keyboard=rows)
+    else:
+        markup = InlineKeyboardMarkup(inline_keyboard=rows)
     try:
-        text = f"Оценка: {data_fbs[score][3]}\n{data_fbs[score][2]}\n{data_fbs[score][5]}"
         await message.edit_text(text=text, reply_markup=markup)
     except:
-        text = f"Оценка: {data_fbs[score][3]}\n{data_fbs[score][2]}\n{data_fbs[score][5]}"
         await message.answer(text=text, reply_markup=markup)
 
 @rt_3.message(fb_chek.user_name)
@@ -96,7 +121,6 @@ async def feedback_chek_1(message: Message, state: FSMContext):
     await state.update_data(user_name=message.text)
     rows = [[InlineKeyboardButton(text='<', callback_data='<'), InlineKeyboardButton(text='>', callback_data='>')],
             [InlineKeyboardButton(text='Назад', callback_data='chek_fb')]]
-    markup = InlineKeyboardMarkup(inline_keyboard=rows)
     data_fb = await state.get_data()
     data_fb = data_fb['user_name']
     db = sqlite3.connect('users.db')
@@ -106,7 +130,7 @@ async def feedback_chek_1(message: Message, state: FSMContext):
     db.commit()
     db.close()
     fb_score = len(fbs)
-    await fbs_def(message, fbs, markup, 0)
+    await fbs_def(message, fbs, rows, 0)
     await state.clear()
 
 @rt_3.callback_query(F.data == 'send_fb')
@@ -131,7 +155,7 @@ async def feedback_2(message: Message, state: FSMContext):
 @rt_3.callback_query(F.data == 'fb_yes')
 async def fb_data_2_1(call: CallbackQuery, bot: Bot, state: FSMContext):
     await state.clear()
-    await call.message.answer(text='Напишите текст отзыва')
+    await call.message.answer(text='Напишите коментарий')
     await state.set_state(feedback_class_2.text_fb)
 
 @rt_3.callback_query(F.data == 'fb_no')
@@ -154,13 +178,15 @@ async def feedback_4(message: Message, state: FSMContext):
     msg = message
     await state.update_data(score=message.text)
     data = await state.get_data()
-    await message.answer(text=f"Продавец: @{deff[0][8]}\n\nОценка: {data['score']}\nТекст:   {data['text_fb']}")
+    await message.answer(text=f"Продавец: @{deff[0][8]}\n\nОценка: {data['score']}\nКометарий:   {data['text_fb']}")
     await message.answer(text=f"Все верно?", reply_markup=markup)
     await state.clear()
 
 @rt_3.callback_query(F.data == 'publish_yes')
 async def fb_data_4_1(call: CallbackQuery, bot: Bot, state: FSMContext):
-    await call.message.answer('Отзыв опубликован')
+    rows = [[InlineKeyboardButton(text='Главное меню', callback_data='back')]]
+    markup = InlineKeyboardMarkup(inline_keyboard=rows)
+    await call.message.edit_text('Отзыв опубликован', reply_markup=markup)
     db = sqlite3.connect('users.db')
     cur = db.cursor()
     cur.execute(f"INSERT INTO fb_offer VALUES ('{deff[0][1]}', '{deff[0][8]}', '{data['text_fb']}', '{data['score']}', '{msg.from_user.username}', '{date.today()}')")
