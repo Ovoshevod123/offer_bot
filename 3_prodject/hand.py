@@ -120,7 +120,7 @@ async def new_6(message: Message, state: FSMContext, bot: Bot, ):
 @rt.callback_query(F.data == 'good')
 async def send_0(callback: CallbackQuery, bot: Bot):
     global send_01, send_02
-    rows = [[buttons[0], buttons[1]]]
+    rows = [[buttons[4]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
     col = len(photo)
     if col > 1:
@@ -193,7 +193,7 @@ async def forward(message, offer_data):
     id_msg = await message.answer_media_group(media=builder.build())
     return id_msg
 
-async def del_media(ids, bot, id_offer):
+async def del_media(bot, id_offer):
     db = sqlite3.connect('users.db')
     cur = db.cursor()
     cur.execute(f"SELECT photo FROM users_offer WHERE offer_id_channel = '{id_offer}'")
@@ -205,9 +205,9 @@ async def del_media(ids, bot, id_offer):
     photo_.pop(0)
     col = len(photo_)
     for i in range(col):
-        ii = int(ids) + col - 1
+        ii = int(id_offer) + col - 1
         ii = ii - i
-        await bot.delete_message(chat_id=send_01.chat.id, message_id=ii)
+        await bot.delete_message(chat_id=CHANNEL_ID, message_id=ii)
 
 @rt.callback_query(lambda query: query.data in id_list)
 async def delete_1(call: CallbackQuery, bot: Bot):
