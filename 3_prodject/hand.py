@@ -1,3 +1,5 @@
+import datetime
+
 from aiogram import types, Router, F, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -8,14 +10,16 @@ import sqlite3
 import time
 from reply import buttons, but_del, edit_but, buttons_edit
 from inf import CHANNEL_ID
-from feedback import average_rating
+from feedback import average_rating, fbs_def, account_fb
 
 rt = Router()
 
 photo = []
 id_list = []
-id_list_pay = []
+id_list_dispatch = []
+id_list_auto = []
 
+send_01 = Message
 class new_product(StatesGroup):
     photo = State()
     name = State()
@@ -23,29 +27,70 @@ class new_product(StatesGroup):
     price = State()
     locate = State()
 
+async def new_but(chat_id):
+    db = sqlite3.connect('users.db')
+    cur = db.cursor()
+    cur.execute(f"SELECT * FROM users_offer WHERE id = '{chat_id}'")
+    date = cur.fetchone()
+    db.commit()
+    db.close()
+    if date == None:
+        rows = [[buttons[5], buttons[1]],
+                [buttons[6], InlineKeyboardButton(text='FAQ❗', callback_data='faq')],
+                [buttons[0]]]
+        return rows
+    else:
+        rows = [[buttons[5], buttons[1]],
+                [buttons[6], InlineKeyboardButton(text='FAQ❗', callback_data='faq')]]
+        return rows
+
 @rt.message(Command('start'))
 async def start(message: Message):
     global send_01
-    rows = [[buttons[5], buttons[1]],
-            [buttons[6], buttons[0]]]
+    rows = await new_but(message.chat.id)
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    await message.answer(text='Здравсвуйте', reply_markup=markup)
+    db = sqlite3.connect('users.db')
+    cur = db.cursor()
+    cur.execute(f"SELECT * FROM users_offer WHERE id = '{message.chat.id}'")
+    date = cur.fetchall()
+    db.commit()
+    db.close()
+    col = len(date)
+    average = await average_rating(message.from_user.username)
+    await message.answer(text=f'👤 Пользователь: @{message.from_user.username}\n'
+                              f'🪪 ID: <b>{message.chat.id}</b>\n'
+                              f'🗂️ Количество объявлений: <b>{col}</b>\n'
+                              f'📈 Ваш рейтинг: <b>{average[0]}</b>\n'
+                              f'📊 Количество отзывов: <b>{average[1]}</b>', reply_markup=markup, parse_mode='HTML')
     send_01 = message
 
 @rt.callback_query(F.data == 'back')
 async def back(call: CallbackQuery, state: FSMContext):
     global id_list, id_list_pay
-    rows = [[buttons[5], buttons[1]],
-            [buttons[6], buttons[0]]]
+    rows = await new_but(send_01.chat.id)
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    await call.message.edit_text(text='Здравсвуйте', reply_markup=markup)
+    db = sqlite3.connect('users.db')
+    cur = db.cursor()
+    cur.execute(f"SELECT * FROM users_offer WHERE id = '{send_01.chat.id}'")
+    date = cur.fetchall()
+    db.commit()
+    db.close()
+    col = len(date)
+    average = await average_rating(send_01.from_user.username)
+    await call.message.edit_text(text=f'👤 Пользователь: @{send_01.from_user.username}\n'
+                              f'🪪 ID: <b>{send_01.chat.id}</b>\n'
+                              f'🗂️ Количество объявлений: <b>{col}</b>\n'
+                              f'📈 Ваш рейтинг: <b>{average[0]}</b>\n'
+                              f'📊 Количество отзывов: <b>{average[1]}</b>', reply_markup=markup, parse_mode='HTML')
     await state.clear()
     id_list.clear()
-    id_list_pay.clear()
+    id_list_dispatch.clear()
+    id_list_auto.clear()
 
 @rt.callback_query(F.data == 'new')
 async def new_1(callback: CallbackQuery, state: FSMContext):
     photo.clear()
+
     rows = [[buttons[4]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await callback.message.edit_text(text=f'Вы начали заполнение анкеты нового товара.\n\nПришлите фото:', reply_markup=markup)
@@ -54,14 +99,15 @@ async def new_1(callback: CallbackQuery, state: FSMContext):
 @rt.message(new_product.photo)
 async def new_2(message: Message, state: FSMContext):
     kb = [[types.KeyboardButton(text="Это все, сохранить фото")]]
+    rows = [[InlineKeyboardButton(text='Главное меню', callback_data='back')]]
     markup = ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+    markup_2 = InlineKeyboardMarkup(inline_keyboard=rows)
     try:
         if message.text == 'Это все, сохранить фото':
             await state.update_data(photo=photo)
             await state.set_state(new_product.name)
             await message.answer(text='Фото сохранены.', reply_markup=types.ReplyKeyboardRemove())
-            await message.answer(text='Введите название товара:')
-
+            await message.answer(text='Введите название товара:', reply_markup=markup_2)
         else:
             photo_1 = message.photo
             photo.append(photo_1[-1].file_id)
@@ -80,21 +126,27 @@ async def new_2(message: Message, state: FSMContext):
 
 @rt.message(new_product.name)
 async def new_3(message: Message, state: FSMContext):
+    rows = [[InlineKeyboardButton(text='Главное меню', callback_data='back')]]
+    markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await state.update_data(name=message.text)
     await state.set_state(new_product.description)
-    await message.answer(text='Введите описание товара:')
+    await message.answer(text='Введите описание товара:', reply_markup=markup)
 
 @rt.message(new_product.description)
 async def new_4(message: Message, state: FSMContext):
+    rows = [[InlineKeyboardButton(text='Главное меню', callback_data='back')]]
+    markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await state.update_data(description=message.text)
     await state.set_state(new_product.price)
-    await message.answer(text='Введите цену товара:')
+    await message.answer(text='Введите цену товара:', reply_markup=markup)
 
 @rt.message(new_product.price)
 async def new_5(message: Message, state: FSMContext):
+    rows = [[InlineKeyboardButton(text='Главное меню', callback_data='back')]]
+    markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await state.update_data(price=message.text)
     await state.set_state(new_product.locate)
-    await message.answer(text='Укажите место встречи с покупателем:')
+    await message.answer(text='Укажите место встречи с покупателем:', reply_markup=markup)
 
 @rt.message(new_product.locate)
 async def new_6(message: Message, state: FSMContext, bot: Bot, ):
@@ -143,31 +195,76 @@ async def send_0(callback: CallbackQuery, bot: Bot):
     info = cur.fetchone()
     if info == None:
         cur.execute(f"INSERT INTO users VALUES ('{send_01.from_user.id}', '{send_01.from_user.username}', '{send_01.from_user.full_name}')")
-    cur.execute(f"""INSERT INTO users_offer VALUES ('{send_01.chat.id}', '{send_02[0].message_id}', '{a}', '{data_state['name']}', '{data_state['description']}', '{data_state['price']}', '{data_state['locate']}', '{send_02[0].media_group_id}', '{send_01.from_user.username}')""")
+    cur.execute(f"SELECT id FROM unblock WHERE id = '{send_01.from_user.id}'")
+    ub = cur.fetchone()
+    if ub != None:
+        date = datetime.datetime.now()
+        cur.execute(f"""INSERT INTO users_offer VALUES ('{send_01.chat.id}', '{send_02[0].message_id}', '{a}', '{data_state['name']}', '{data_state['description']}', '{data_state['price']}', '{data_state['locate']}', '{send_02[0].media_group_id}', '{send_01.from_user.username}', '{date.date()}')""")
+        await callback.message.edit_text(
+            text='Теперь твое объявление опубликованно <a href="https://web.telegram.org/a/#-1002160209777">здесь</a>.',
+            parse_mode='HTML', reply_markup=markup)
+    if ub == None:
+        cur.execute(f"SELECT date FROM users_offer WHERE id = '{send_01.from_user.id}'")
+        b = cur.fetchall()
+        date = datetime.datetime.now()
+        if b == None:
+            cur.execute(f"""INSERT INTO users_offer VALUES ('{send_01.chat.id}', '{send_02[0].message_id}', '{a}', '{data_state['name']}', '{data_state['description']}', '{data_state['price']}', '{data_state['locate']}', '{send_02[0].media_group_id}', '{send_01.from_user.username}', '{date.date()}')""")
+        else:
+            loc = []
+            for i in b:
+                if str(i[0]) == str(date.date()):
+                    loc.append(True)
+            if not loc:
+                await callback.message.edit_text(
+                    text='Теперь твое объявление опубликованно <a href="https://web.telegram.org/a/#-1002160209777">здесь</a>.',
+                    parse_mode='HTML', reply_markup=markup)
+                cur.execute(
+                    f"""INSERT INTO users_offer VALUES ('{send_01.chat.id}', '{send_02[0].message_id}', '{a}', '{data_state['name']}', '{data_state['description']}', '{data_state['price']}', '{data_state['locate']}', '{send_02[0].media_group_id}', '{send_01.from_user.username}', '{date.date()}')""")
+            else:
+                await callback.message.edit_text('Вы сегодня уже публиковали объявление')
+                loc.clear()
+
     db.commit()
     db.close()
-
-    await callback.message.edit_text(text='Теперь твое объявление опубликованно <a href="https://web.telegram.org/a/#-1002160209777">здесь</a>.', parse_mode='HTML', reply_markup=markup)
     photo.clear()
 
-def offer_def(msg, from_var):
-    global id_list, deff, id_list_pay
+async def offer_def(msg, from_var):
+    global id_list, deff, id_list_dispatch, id_list_auto
 
     deff = but_del(msg, from_var)
     if from_var == 'menu':
         for i in deff[1].keys():
             id_list.append(f'{i[0]}_menu')
-    if from_var == 'pay':
+
+    if from_var == 'dispatch':
         for i in deff[1].keys():
-            id_list_pay.append(f'{i[0]}_pay')
+            id_list_dispatch.append(f'{i[0]}_dispatch')
+
+    if from_var == 'auto':
+        for i in deff[1].keys():
+            id_list_auto.append(f'{i[0]}_auto')
     row = deff[0]
     return row
 
-@rt.callback_query(F.data == 'menu')
+@rt.callback_query(F.data == 'account')
+async def account(call: CallbackQuery):
+    rows = [[InlineKeyboardButton(text='Ваши отзывы', callback_data='stat'), buttons[7]],
+            [buttons[4]]]
+    markup = InlineKeyboardMarkup(inline_keyboard=rows)
+    await call.message.edit_text(text='sds', reply_markup=markup)
+
+@rt.callback_query(F.data == 'stat')
+async def account(call: CallbackQuery):
+    await account_fb(call, send_01)
+
+@rt.callback_query(F.data == 'my_off')
 async def delete_0(call: CallbackQuery):
-    rows = offer_def(call.message, 'menu')
+    rows = await offer_def(call.message, 'menu')
     rows_2 = [[buttons[0]],
-              [buttons[4]]]
+              [InlineKeyboardButton(text='Назад⬅️', callback_data='account')]]
+    col = len(rows)
+    rows[col-1] = [InlineKeyboardButton(text='Назад⬅️', callback_data='account')]
+    rows.insert(-1, [buttons[0]])
     if len(rows) == 1:
         markup = InlineKeyboardMarkup(inline_keyboard=rows_2)
         await call.message.edit_text(text='У вас нет активных объявлений(\n\nХотите создать новое объявление?', reply_markup=markup)
@@ -230,13 +327,15 @@ async def back_edit(call: CallbackQuery, bot: Bot):
 @rt.callback_query(F.data == 'dell')
 async def del_1(call: CallbackQuery):
     rows = [[InlineKeyboardButton(text='Продал в барахолке "название"', callback_data='sell'), InlineKeyboardButton(text='Другая причина', callback_data='dell_2')],
-            [InlineKeyboardButton(text='Назад', callback_data='menu')]]
+            [buttons_edit[5]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await call.message.edit_text(text='Укажити причину удаления сообщения', reply_markup=markup)
 
 @rt.callback_query(F.data == 'sell')
 async def del_1(call: CallbackQuery):
-    pass
+    rows = [[InlineKeyboardButton(text='Да', callback_data='yes'), InlineKeyboardButton(text='Нет', callback_data='no')]]
+    markup = InlineKeyboardMarkup(inline_keyboard=rows)
+    await call.message.edit_text(text='Вы уверены что хотите удалить объявление', reply_markup=markup)
 
 @rt.callback_query(F.data == 'dell_2')
 async def del_1(call: CallbackQuery):
@@ -279,7 +378,8 @@ async def edit_0(call: CallbackQuery):
             [buttons_edit[1]],
             [buttons_edit[2]],
             [buttons_edit[3]],
-            [buttons_edit[4]],]
+            [buttons_edit[4]],
+            [buttons_edit[5]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await call.message.edit_text(text='Что хотите изменить?', reply_markup=markup)
 
