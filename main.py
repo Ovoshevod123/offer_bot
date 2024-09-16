@@ -7,9 +7,11 @@ from admin import rt_4
 from pay import rt_5
 from bot_cmds import private
 from inf import TOKEN, ADMIN_LIST
+from aiogram.client.session.aiohttp import AiohttpSession
 
 BOT_TOKEN = TOKEN
-
+# session = AiohttpSession(proxy='http://proxy.server:3128')
+# bot = Bot(token=BOT_TOKEN, session=session)
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
 dp.include_routers(rt, rt_2, rt_3, rt_4, rt_5)

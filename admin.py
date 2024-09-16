@@ -22,22 +22,31 @@ async def chek_admin(message: Message):
 @rt_4.callback_query(F.data == 'ap')
 async def auto_posting(call: CallbackQuery, bot: Bot):
     while True:
-        if int(datetime.datetime.now(tz).time().hour) == 14 and int(datetime.datetime.now(tz).time().minute) == 35:
+        if int(datetime.datetime.now(tz).time().hour) == 9 and int(datetime.datetime.now(tz).time().minute) == 0:
+        # if int(datetime.datetime.now(tz).time().hour) == int(datetime.datetime.now(tz).time().hour):
             db = sqlite3.connect('users.db')
             cur = db.cursor()
             cur.execute(f"SELECT offer_id_channel, final FROM auto_posting")
             ids = cur.fetchall()
+            cur.execute(f"SELECT id, date FROM unblock")
+            ids_2 = cur.fetchall()
             db.commit()
             db.close()
+            for i in ids_2:
+                still_time = i[1].split('-')
+                still_time = datetime.datetime(int(still_time[0]), int(still_time[1]), int(still_time[2]), tzinfo=tz) - datetime.datetime.now(tz)
+                if still_time.days == 29:
+                    db = sqlite3.connect('users.db')
+                    cur = db.cursor()
+                    cur.execute(f"DELETE from unblock WHERE id = {i[0]}")
+                    db.commit()
+                    db.close()
             for i in ids:
                 still_time = i[1].split('-')
                 still_time = datetime.datetime(int(still_time[0]), int(still_time[1]), int(still_time[2]), tzinfo=tz) - datetime.datetime.now(tz)
-                print(i, still_time.days + 1)
                 if still_time.days + 1 < 0:
                     db = sqlite3.connect('users.db')
                     cur = db.cursor()
-                    print('if')
-                    print(i[0])
                     cur.execute(f"DELETE from auto_posting WHERE offer_id_channel = {i[0]}")
                     db.commit()
                     db.close()

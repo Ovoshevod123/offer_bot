@@ -1,3 +1,4 @@
+import datetime
 from aiogram import types, Router, F, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -14,84 +15,110 @@ rt = Router()
 
 photo = []
 id_list = []
-id_list_pay = []
+id_list_dispatch = []
+id_list_auto = []
+chek_ub = []
 
+send_01 = Message
 class new_product(StatesGroup):
+    group = State()
     photo = State()
     name = State()
     description = State()
     price = State()
     locate = State()
 
-async def new_but(chat_id):
-    db = sqlite3.connect('users.db')
-    cur = db.cursor()
-    cur.execute(f"SELECT * FROM users_offer WHERE id = '{chat_id}'")
-    date = cur.fetchone()
-    db.commit()
-    db.close()
-    if date == None:
-        rows = [[buttons[5], buttons[1]],
-                [buttons[6], InlineKeyboardButton(text='FAQ❗', callback_data='faq')],
-                [buttons[0]]]
-        return rows
-    else:
-        rows = [[buttons[5], buttons[1]],
-                [buttons[6], InlineKeyboardButton(text='FAQ❗', callback_data='faq')]]
-        return rows
-
 @rt.message(Command('start'))
 async def start(message: Message):
     global send_01
-    rows = await new_but(message.chat.id)
+    rows = [[buttons[5], buttons[1]],
+            [buttons[6], InlineKeyboardButton(text='🆘 Тех. поддрежка', url='t.me/Kukuru3a')],
+            [buttons[0]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    db = sqlite3.connect('users.db')
-    cur = db.cursor()
-    cur.execute(f"SELECT * FROM users_offer WHERE id = '{message.chat.id}'")
-    date = cur.fetchall()
-    db.commit()
-    db.close()
-    col = len(date)
-    average = await average_rating(message.from_user.username)
-    await message.answer(text=f'👤 Пользователь: @{message.from_user.username}\n'
-                              f'🪪 ID: <b>{message.chat.id}</b>\n'
-                              f'🗂️ Количество объявлений: <b>{col}</b>\n'
-                              f'📈 Ваш рейтинг: <b>{average[0]}</b>\n'
-                              f'📊 Количество отзывов: <b>{average[1]}</b>', reply_markup=markup, parse_mode='HTML')
+    await message.answer(text=f'<b>💨 VБарахолка 💨</b>\n\n'
+                              f'Покупайте, продавайте под системы, кальяты и т.д.\n\n'
+                              f'Подпичывайтесь на наш канал.\n\n'
+                              f'Ваши объявления публикуются здесь.', reply_markup=markup, parse_mode='HTML')
     send_01 = message
 
 @rt.callback_query(F.data == 'back')
 async def back(call: CallbackQuery, state: FSMContext):
     global id_list, id_list_pay
-    rows = await new_but(send_01.chat.id)
+    rows = [[buttons[5], buttons[1]],
+            [buttons[6], InlineKeyboardButton(text='🆘 Помощь', callback_data='help')],
+            [buttons[0]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    db = sqlite3.connect('users.db')
-    cur = db.cursor()
-    cur.execute(f"SELECT * FROM users_offer WHERE id = '{send_01.chat.id}'")
-    date = cur.fetchall()
-    db.commit()
-    db.close()
-    col = len(date)
-    average = await average_rating(send_01.from_user.username)
-    await call.message.edit_text(text=f'👤 Пользователь: @{send_01.from_user.username}\n'
-                              f'🪪 ID: <b>{send_01.chat.id}</b>\n'
-                              f'🗂️ Количество объявлений: <b>{col}</b>\n'
-                              f'📈 Ваш рейтинг: <b>{average[0]}</b>\n'
-                              f'📊 Количество отзывов: <b>{average[1]}</b>', reply_markup=markup, parse_mode='HTML')
+    await call.message.edit_text(text=f'<b>💨 VБарахолка 💨</b>\n\n'
+                              f'Покупайте, продавайте под системы, кальяты и т.д.\n\n'
+                              f'Подпичывайтесь на наш канал.\n\n'
+                              f'Ваши объявления публикуются здесь.', reply_markup=markup, parse_mode='HTML')
     await state.clear()
     id_list.clear()
-    id_list_pay.clear()
+    id_list_dispatch.clear()
+    id_list_auto.clear()
 
 @rt.callback_query(F.data == 'new')
 async def new_1(callback: CallbackQuery, state: FSMContext):
-    photo.clear()
-    rows = [[buttons[4]]]
+    rows = [[InlineKeyboardButton(text='Под система', callback_data='pod'), InlineKeyboardButton(text='Жидкость', callback_data='zhizha')],
+            [buttons[4]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    await callback.message.edit_text(text=f'Вы начали заполнение анкеты нового товара.\n\nПришлите фото:', reply_markup=markup)
+    photo.clear()
+    db = sqlite3.connect('users.db')
+    cur = db.cursor()
+    cur.execute(f"SELECT id FROM unblock WHERE id = '{send_01.from_user.id}'")
+    ub = cur.fetchone()
+    cur.execute(f"SELECT col FROM unblock_col WHERE id = '{send_01.from_user.id}'")
+    col = cur.fetchone()
+    if ub == None:
+        cur.execute(f"SELECT date FROM users_offer WHERE id = '{send_01.from_user.id}'")
+        b = cur.fetchall()
+        date = datetime.datetime.now()
+        if b == None:
+            await callback.message.edit_text(text=f'Вы начали заполнение анкеты нового товара.\n\nВыбирете класс объявления:',
+                                             reply_markup=markup)
+        else:
+            loc = []
+            for i in b:
+                if str(i[0]) == str(date.date()):
+                    loc.append(True)
+            if not loc:
+                await callback.message.edit_text(text=f'Вы начали заполнение анкеты нового товара.\n\nВыбирете класс объявления:',
+                                                 reply_markup=markup)
+            else:
+                rows_2 = [[InlineKeyboardButton(text='Использовать токен', callback_data='use_token_ub')]]
+                markup = InlineKeyboardMarkup(inline_keyboard=rows_2)
+                await callback.message.edit_text(f'Вы сегодня уже публиковали объявление\nУ вас {col[0]} токенов', reply_markup=markup)
+                loc.clear()
+    else:
+        await callback.message.edit_text(text=f'Вы начали заполнение анкеты нового товара.\n\nВыбирете класс объявления:',
+                                         reply_markup=markup)
+    db.commit()
+    db.close()
+
+@rt.callback_query(F.data == 'use_token_ub')
+async def use_token_ub(call: CallbackQuery, state: FSMContext):
+    global chek_ub
+    chek_ub.clear()
+    rows = [[InlineKeyboardButton(text='Под система', callback_data='pod'), InlineKeyboardButton(text='Жидкость', callback_data='zhizha')],
+            [buttons[4]]]
+    markup = InlineKeyboardMarkup(inline_keyboard=rows)
+    chek_ub.append(True)
+    await call.message.edit_text(text=f'Вы начали заполнение анкеты нового товара.\n\nВыбирете класс объявления:',
+                                     reply_markup=markup)
+
+@rt.callback_query(F.data == 'pod')
+@rt.callback_query(F.data == 'zhizha')
+async def new_2_1(call: CallbackQuery, state: FSMContext):
+    rows = [[InlineKeyboardButton(text='Главное меню', callback_data='back')]]
+    markup = InlineKeyboardMarkup(inline_keyboard=rows)
+    fsm_date = call.data
+    await state.update_data(group=fsm_date)
+    await call.message.edit_text(text='Пришлите фото', reply_markup=markup)
     await state.set_state(new_product.photo)
+    print(await state.get_data())
 
 @rt.message(new_product.photo)
-async def new_2(message: Message, state: FSMContext):
+async def new_2_2(message: Message, state: FSMContext):
     kb = [[types.KeyboardButton(text="Это все, сохранить фото")]]
     rows = [[InlineKeyboardButton(text='Главное меню', callback_data='back')]]
     markup = ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
@@ -149,7 +176,11 @@ async def new_6(message: Message, state: FSMContext, bot: Bot, ):
     global text, send, name_ofer, data_state
     data_state = data
     average = await average_rating(message.from_user.username)
-    text = f"Цена: {data['price']}\n{data['name']}\n{data['description']}\n{data['locate']}\n\nПродавец: @{message.from_user.username}\nРейтинг продавца: {average[0]}\nКол-во отзывов: {average[1]}"
+    if data['group'] == 'zhiha':
+        data['group'] = 'Жидкость'
+    else:
+        data['group'] = 'Эл_сигарета'
+    text = f"#{data['group']}\nЦена: {data['price']}\n{data['name']}\n{data['description']}\n{data['locate']}\n\nПродавец: @{message.from_user.username}\nРейтинг продавца: {average[0]}\nКол-во отзывов: {average[1]}"
     builder = MediaGroupBuilder(caption=text)
     for i in data['photo']:
         builder.add_photo(media=f'{i}')
@@ -165,9 +196,20 @@ async def new_6(message: Message, state: FSMContext, bot: Bot, ):
 
 @rt.callback_query(F.data == 'good')
 async def send_0(callback: CallbackQuery, bot: Bot):
-    global send_01, send_02
+    global send_01, send_02, chek_ub
     rows = [[buttons[4]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
+
+    db = sqlite3.connect('users.db')
+    cur = db.cursor()
+    try:
+        if chek_ub[0] == True:
+            cur.execute(f"SELECT col FROM unblock_col WHERE id = '{callback.from_user.id}'")
+            col = cur.fetchone()
+            cur.execute(f"UPDATE unblock_col SET col = {int(col[0] - 1)} WHERE id = '{callback.from_user.id}'")
+    except:
+        pass
+
     col = len(photo)
     if col > 1:
         media = [
@@ -179,34 +221,42 @@ async def send_0(callback: CallbackQuery, bot: Bot):
 
     send_02 = await bot.send_media_group(chat_id=CHANNEL_ID, media=media)
     await bot.edit_message_caption(chat_id=CHANNEL_ID, message_id=send_02[0].message_id, caption=text + f'\nid сообщения: {send_02[0].message_id}')
-    db = sqlite3.connect('users.db')
-    cur = db.cursor()
+
     a = ''
     for i in data_state['photo']:
         a = a+'|'+i
 
+    date = datetime.datetime.now()
     cur.execute(f"SELECT id FROM users WHERE id = '{send_01.from_user.id}'")
     info = cur.fetchone()
     if info == None:
-        cur.execute(f"INSERT INTO users VALUES ('{send_01.from_user.id}', '{send_01.from_user.username}', '{send_01.from_user.full_name}')")
-    cur.execute(f"""INSERT INTO users_offer VALUES ('{send_01.chat.id}', '{send_02[0].message_id}', '{a}', '{data_state['name']}', '{data_state['description']}', '{data_state['price']}', '{data_state['locate']}', '{send_02[0].media_group_id}', '{send_01.from_user.username}')""")
+        cur.execute(
+            f"INSERT INTO users VALUES ('{send_01.from_user.id}', '{send_01.from_user.username}', '0')")
+    cur.execute(
+        f"""INSERT INTO users_offer VALUES ('{send_01.chat.id}', '{send_02[0].message_id}', '{a}', '{data_state['name']}', '{data_state['description']}', '{data_state['price']}', '{data_state['locate']}', '{data_state['group']}', '{send_01.from_user.username}', '{date.date()}')""")
     db.commit()
     db.close()
 
-    await callback.message.edit_text(text='Теперь твое объявление опубликованно <a href="https://web.telegram.org/a/#-1002160209777">здесь</a>.', parse_mode='HTML', reply_markup=markup)
+    await callback.message.edit_text(
+        text='Теперь твое объявление опубликованно <a href="https://web.telegram.org/a/#-1002160209777">здесь</a>.',
+        parse_mode='HTML', reply_markup=markup)
     photo.clear()
 
-def offer_def(msg, from_var):
-    global id_list, deff, id_list_pay
+async def offer_def(msg, from_var):
+    global id_list, id_list_dispatch, id_list_auto
 
     deff = but_del(msg, from_var)
     if from_var == 'menu':
         for i in deff[1].keys():
             id_list.append(f'{i[0]}_menu')
 
-    if from_var == 'pay':
+    if from_var == 'dispatch':
         for i in deff[1].keys():
-            id_list_pay.append(f'{i[0]}_pay')
+            id_list_dispatch.append(f'{i[0]}_dispatch')
+
+    if from_var == 'auto':
+        for i in deff[1].keys():
+            id_list_auto.append(f'{i[0]}_auto')
     row = deff[0]
     return row
 
@@ -215,7 +265,19 @@ async def account(call: CallbackQuery):
     rows = [[InlineKeyboardButton(text='Ваши отзывы', callback_data='stat'), buttons[7]],
             [buttons[4]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    await call.message.edit_text(text='sds', reply_markup=markup)
+    db = sqlite3.connect('users.db')
+    cur = db.cursor()
+    cur.execute(f"SELECT * FROM users_offer WHERE id = '{send_01.chat.id}'")
+    date = cur.fetchall()
+    db.commit()
+    db.close()
+    col = len(date)
+    average = await average_rating(send_01.from_user.username)
+    await call.message.edit_text(text=f'👤 Пользователь: @{send_01.from_user.username}\n'
+                               f'🪪 ID: <b>{send_01.chat.id}</b>\n'
+                               f'🗂️ Количество объявлений: <b>{col}</b>\n'
+                               f'📈 Ваш рейтинг: <b>{average[0]}</b>\n'
+                               f'📊 Количество отзывов: <b>{average[1]}</b>', reply_markup=markup, parse_mode='HTML')
 
 @rt.callback_query(F.data == 'stat')
 async def account(call: CallbackQuery):
@@ -223,11 +285,9 @@ async def account(call: CallbackQuery):
 
 @rt.callback_query(F.data == 'my_off')
 async def delete_0(call: CallbackQuery):
-    rows = offer_def(call.message, 'menu')
+    rows = await offer_def(call.message, 'menu')
     rows_2 = [[buttons[0]],
-              [buttons[4]]]
-    col = len(rows)
-    rows[col-1] = [InlineKeyboardButton(text='Назад⬅️', callback_data='account')]
+              [InlineKeyboardButton(text='‹ Назад', callback_data='account')]]
     if len(rows) == 1:
         markup = InlineKeyboardMarkup(inline_keyboard=rows_2)
         await call.message.edit_text(text='У вас нет активных объявлений(\n\nХотите создать новое объявление?', reply_markup=markup)
@@ -281,7 +341,7 @@ async def delete_1(call: CallbackQuery, bot: Bot):
     rows = [[edit_but[0], edit_but[1]],
             [edit_but[2]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    await call.message.answer(text='Это ваше объявление⬆️\n\nЧто хотите сделать?', reply_markup=markup)
+    await call.message.answer(text='⬆️ Это ваше объявление\n\nЧто хотите сделать?', reply_markup=markup)
 
 @rt.callback_query(F.data == 'back_2')
 async def back_edit(call: CallbackQuery, bot: Bot):
@@ -333,7 +393,7 @@ async def back_edit(call: CallbackQuery):
     rows = [[edit_but[0], edit_but[1]],
             [edit_but[2]]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    await call.message.edit_text(text='Это ваше объявление⬆️\n\nЧто хотите сделать?', reply_markup=markup)
+    await call.message.edit_text(text='⬆️ Это ваше объявление\n\nЧто хотите сделать?', reply_markup=markup)
 
 @rt.callback_query(F.data == 'edit')
 async def edit_0(call: CallbackQuery):
@@ -416,7 +476,7 @@ async def edit_photo_2(message: Message, state: FSMContext, bot: Bot):
                 a = a + '|' + i
             await edit_def('photo', a, call_data)
             send_media_msg = await edit_media(message, bot)
-            await message.answer(text='Вот так теперь выглядит ваше объявление⬆️⬆', reply_markup=markup_2)
+            await message.answer(text='⬆️ Вот так теперь выглядит ваше объявление', reply_markup=markup_2)
             await state.clear()
         else:
             photo_1 = message.photo
@@ -433,7 +493,7 @@ async def edit_photo_2(message: Message, state: FSMContext, bot: Bot):
                     edit_photo_list = edit_photo_list + '|' + i
                 await edit_def('photo', edit_photo_list, call_data)
                 send_media_msg = await edit_media(message, bot)
-                await message.answer(text='Вот так теперь выглядит ваше объявление⬆️', reply_markup=markup_2)
+                await message.answer(text='⬆️ Вот так теперь выглядит ваше объявление', reply_markup=markup_2)
                 await state.clear()
             elif col > col_photos:
                 await message.answer(text='Вы отправили больше {col_photos} фото')
@@ -556,7 +616,7 @@ async def edit_photo_2(message: Message, state: FSMContext, bot: Bot):
 
     await edit_def('offer_name', data['name'], call_data)
     await send_media(message)
-    await message.answer(text='Вот так теперь выглядит ваше объявление⬆️', reply_markup=markup_2)
+    await message.answer(text='⬆️ Вот так теперь выглядит ваше объявление', reply_markup=markup_2)
     await state.clear()
 
 @rt.message(edit_product.description)
@@ -569,7 +629,7 @@ async def edit_photo_2(message: Message, state: FSMContext, bot: Bot):
 
     await edit_def('description', data['description'], call_data)
     await send_media(message)
-    await message.answer(text='Вот так теперь выглядит ваше объявление⬆️', reply_markup=markup_2)
+    await message.answer(text='⬆️ Вот так теперь выглядит ваше объявление', reply_markup=markup_2)
     await state.clear()
 
 @rt.message(edit_product.price)
@@ -582,7 +642,7 @@ async def edit_photo_2(message: Message, state: FSMContext, bot: Bot):
 
     await edit_def('price', data['price'], call_data)
     await send_media(message)
-    await message.answer(text='Вот так теперь выглядит ваше объявление⬆️', reply_markup=markup_2)
+    await message.answer(text='⬆️ Вот так теперь выглядит ваше объявление', reply_markup=markup_2)
     await state.clear()
 
 @rt.message(edit_product.locate)
@@ -595,5 +655,5 @@ async def edit_photo_2(message: Message, state: FSMContext, bot: Bot):
 
     await edit_def('locate', data['locate'], call_data)
     await send_media(message)
-    await message.answer(text='Вот так теперь выглядит ваше объявление⬆️', reply_markup=markup_2)
+    await message.answer(text='⬆️ Вот так теперь выглядит ваше объявление', reply_markup=markup_2)
     await state.clear()
