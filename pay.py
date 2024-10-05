@@ -72,15 +72,20 @@ async def pay_offer_menu(call: CallbackQuery, bot: Bot):
     id_msg_2 = await forward(call.message, call_data)
     await payment_question(call.message, 'dispatch_pay_cb')
 
+# [InlineKeyboardButton(text='Ограничение кол-во объявлений', callback_data='unblock')],
+# [InlineKeyboardButton(text='Купить размещение объявление', callback_data='unblock_col')],
+
 @rt_5.callback_query(F.data == 'pay')
 async def pay(call: CallbackQuery):
     rows = [[InlineKeyboardButton(text='Рассылка объявления', callback_data='dispatch_offer')],
             [InlineKeyboardButton(text='Автопубликация', callback_data='auto_posting')],
-            [InlineKeyboardButton(text='Ограничение кол-во объявлений', callback_data='unblock')],
-            [InlineKeyboardButton(text='Купить размещение объявление', callback_data='unblock_col')],
             [InlineKeyboardButton(text='‹ Назад', callback_data='back')]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
-    await call.message.edit_text(text='Выберите товар', reply_markup=markup)
+    await call.message.edit_text(text='💰 <b>Платные тарифы</b>\n\n'
+                                      '<b>Рассылка объявлений</b>:\n'
+                                      'Бот отправляет выбранное объявление в личные сообщения всем пользователям с пометкой "Реклама"\n\n'
+                                      '<b>Автопубликация</b>:\n'
+                                      'Бот публикует выбранное объявление каждый день в 12:00 МСК+1 на протяжении времяни выбранного тарифа\n', reply_markup=markup, parse_mode='html')
 
 @rt_5.callback_query(F.data == 'dispatch_offer')
 async def dispatch(call: CallbackQuery):
@@ -92,7 +97,8 @@ async def dispatch(call: CallbackQuery):
         await call.message.edit_text(text='У вас нет опубликованных объявлений', reply_markup=markup)
     else:
         markup = InlineKeyboardMarkup(inline_keyboard=rows)
-        await call.message.edit_text(text='ssds', reply_markup=markup)
+        await call.message.edit_text(text='⬇️ <b>Это ваши объявления</b>\n\n'
+                                          'Выберите объявление для покупки тарифа', reply_markup=markup, parse_mode='html')
 
 @rt_5.callback_query(F.data == 'dispatch_pay_cb_loc')
 async def dispatch(call: CallbackQuery, bot: Bot):
@@ -157,7 +163,8 @@ async def dispatch(call: CallbackQuery):
         await call.message.edit_text(text='У вас нет опубликованных объявлений', reply_markup=markup)
     else:
         markup = InlineKeyboardMarkup(inline_keyboard=rows)
-        await call.message.edit_text(text='ssds', reply_markup=markup)
+        await call.message.edit_text(text='⬇️ <b>Это ваши объявления</b>\n\n'
+                                          'Выберите объявление для покупки тарифа', reply_markup=markup, parse_mode='html')
 
 @rt_5.callback_query(lambda query: query.data in id_list_auto)
 async def auto_posting(call: CallbackQuery):
